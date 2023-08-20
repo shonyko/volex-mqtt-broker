@@ -8,7 +8,8 @@ export default class MqttHandler {
 		this.client = null;
 		this.host = `${BROKER_ADDR}:${MQTT_PORT}`;
 		this.topics = topics;
-		this.callbacks = {};
+		this.callbacks = new Map();
+		this.pinValueCallback = null;
 	}
 
 	connect() {
@@ -24,6 +25,7 @@ export default class MqttHandler {
 		// Connection callback
 		this.client.on('connect', _ => {
 			console.log(`mqtt client connected`);
+			this.client.subscribe('pin/#', { qos: 0 });
 			this.topics.forEach(topic => {
 				this.client.subscribe(topic, { qos: 0 });
 			});
@@ -33,6 +35,9 @@ export default class MqttHandler {
 		this.client.on('message', (topic, message) => {
 			const json = message.toString();
 			console.log(`[${topic}]: ${json}`);
+			if (topic.startsWith('pin/')) {
+				return this.pinValueCallback(topic, json);
+			}
 			const callbacksArr = this.callbacks[topic];
 			if (!callbacksArr) return;
 
@@ -49,6 +54,10 @@ export default class MqttHandler {
 	on(topic, fn) {
 		if (!this.callbacks[topic]) this.callbacks[topic] = [];
 		this.callbacks[topic].push(fn);
+	}
+
+	onPinValue(fn) {
+		this.pinValueCallback = fn;
 	}
 
 	sendData(topic, data) {

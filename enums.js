@@ -7,6 +7,7 @@ export const Events = Object.freeze({
 	}),
 	PAIR: 'pair',
 	CONFIG: 'conf',
+	PIN_VALUE: 'pin_value',
 	CONNECT: 'conn',
 	DISCONNECT: 'dconn',
 	PING: 'ping',

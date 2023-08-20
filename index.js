@@ -2,7 +2,7 @@
 
 // const MqttHandler = require('./js/MqttHandler');
 import MqttHandler from './js/MqttHandler.js';
-const mqttClient = new MqttHandler(['conf', 'pin/#']);
+const mqttClient = new MqttHandler(['conf']);
 
 // mqttClient.on('temp', async msg => {
 // 	console.log('daaa');
@@ -43,6 +43,19 @@ mqttClient.on('conf', async macAddr => {
 			event: Events.CONFIG,
 			data: {
 				mac: macAddr,
+			},
+		});
+	}
+});
+
+mqttClient.onPinValue((topic, value) => {
+	const pinId = topic.replace('pin/', '');
+	if (socket.connected) {
+		socket.emit('event', {
+			event: Events.PIN_VALUE,
+			data: {
+				id: pinId,
+				value: value,
 			},
 		});
 	}
