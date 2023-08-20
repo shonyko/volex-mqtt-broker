@@ -1,7 +1,9 @@
-const mqtt = require('mqtt');
-const { BROKER_ADDR, MQTT_PORT } = require('./config.js');
+// const mqtt = require('mqtt');
+import mqtt from 'mqtt';
+// const { BROKER_ADDR, MQTT_PORT } = require('./config.js');
+import { BROKER_ADDR, MQTT_PORT } from './config.js';
 
-class MqttHandler {
+export default class MqttHandler {
 	constructor(topics) {
 		this.client = null;
 		this.host = `${BROKER_ADDR}:${MQTT_PORT}`;
@@ -53,5 +55,3 @@ class MqttHandler {
 		this.client.publish(`${topic}`, `${data}`);
 	}
 }
-
-module.exports = MqttHandler;

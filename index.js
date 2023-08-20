@@ -1,7 +1,8 @@
-const { BROKER_ADDR, DB_PORT } = require('./js/config');
+// const { BROKER_ADDR, DB_PORT } = require('./js/config');
 
-const MqttHandler = require('./js/MqttHandler');
-const mqttClient = new MqttHandler(['conn', 'conf']);
+// const MqttHandler = require('./js/MqttHandler');
+import MqttHandler from './js/MqttHandler.js';
+const mqttClient = new MqttHandler(['conf', 'pin/#']);
 
 // mqttClient.on('temp', async msg => {
 // 	console.log('daaa');
@@ -37,7 +38,58 @@ mqttClient.on('conf', async macAddr => {
 	// outputs
 	// values
 	// params
-	mqttClient.sendData(`${macAddr}`, JSON.stringify({ inputs: ['V0'] }));
+	if (socket.connected) {
+		socket.emit('event', {
+			event: Events.CONFIG,
+			data: {
+				mac: macAddr,
+			},
+		});
+	}
 });
 
 mqttClient.connect();
+
+import { io } from 'socket.io-client';
+import { Events, Services } from './enums.js';
+
+const broker_addr = process.env.BROKER ?? 'localhost:3000';
+console.log(`BROker addr: ${broker_addr}`);
+const socket = io(`ws://${broker_addr}`);
+
+function register() {
+	socket.emit(
+		Events.Socket.REGISTER,
+		Services.MQTT_BROKER,
+		({ success, err }) => {
+			if (!success) {
+				console.log(`Could not register: ${err}`);
+				console.log(`Retrying in 2 seconds`);
+				return setTimeout(register, 2000);
+			}
+		}
+	);
+}
+
+socket.on('connect', _ => {
+	console.log('Socket connected!');
+	register();
+});
+
+function onConfigReceived(data, _) {
+	mqttClient.sendData(`${data.mac}`, data.config);
+}
+
+const cmdHandlers = new Map();
+cmdHandlers.set('conf', onConfigReceived);
+
+socket.on('msg', ({ cmd, data }, cb) => {
+	console.log(`Received: ${data}`);
+	const json = JSON.parse(data);
+	if (!cmdHandlers.has(cmd)) {
+		console.log(`No handler defined for: ${cmd}`);
+		return cb?.({ success: false, err: 'No handler defined for that commnad' });
+	}
+
+	cmdHandlers.get(cmd)(json, cb);
+});
