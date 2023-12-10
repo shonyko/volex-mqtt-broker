@@ -94,21 +94,13 @@ socket.on('connect_error', err => {
 	console.log(`Could not connect due to `, err);
 });
 
-function onConfigReceived(data, _) {
-	mqttClient.sendData(`${data.mac}`, data.config);
-}
-
-const cmdHandlers = new Map();
-cmdHandlers.set('conf', onConfigReceived);
-
-socket.on(Events.MESSAGE, ({ cmd, data }, cb) => {
-	console.log(`Received [${cmd}]: `, data);
-	if (!cmdHandlers.has(cmd)) {
-		console.log(`No handler defined for: ${cmd}`);
-		return cb?.({ success: false, err: 'No handler defined for that commnad' });
+socket.on('conf', (conf, cb) => {
+	if (conf == null) {
+		console.log('Configuration is required, got null');
+		return cb?.({ success: false, err: 'Configuration is required' });
 	}
-	const json = JSON.parse(data);
-	cmdHandlers.get(cmd)(json, cb);
+	mqttClient.sendData(`${conf.mac}`, JSON.stringify(conf.config));
+	cb?.({ success: true });
 });
 
 socket.on(Events.PIN_VALUE, ({ id, value }) => {
