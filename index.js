@@ -39,7 +39,7 @@ mqttClient.on('conf', async macAddr => {
 	// values
 	// params
 	if (socket.connected) {
-		socket.emit('event', {
+		socket.emit(Events.BROADCAST, {
 			event: Events.CONFIG,
 			data: {
 				mac: macAddr,
@@ -50,12 +50,13 @@ mqttClient.on('conf', async macAddr => {
 
 mqttClient.onPinValue((topic, value) => {
 	const pinId = topic.replace('pin/', '');
+	console.log(`got from topic [${topic}]: `, value);
 	if (socket.connected) {
-		socket.emit('event', {
+		socket.emit(Events.BROADCAST, {
 			event: Events.PIN_VALUE,
 			data: {
 				id: pinId,
-				value: value,
+				value,
 			},
 		});
 	}
@@ -65,10 +66,10 @@ mqttClient.connect();
 
 import { io } from 'socket.io-client';
 import { Events, Services } from './enums.js';
+import { BROKER_ADDR } from './js/config.js';
 
-const broker_addr = process.env.BROKER ?? 'localhost:3000';
-console.log(`BROker addr: ${broker_addr}`);
-const socket = io(`ws://${broker_addr}`);
+console.log(`Broker addr: ${BROKER_ADDR}`);
+const socket = io(BROKER_ADDR);
 
 function register() {
 	socket.emit(
@@ -76,7 +77,7 @@ function register() {
 		Services.MQTT_BROKER,
 		({ success, err }) => {
 			if (!success) {
-				console.log(`Could not register: ${err}`);
+				console.log(`Could not register: `, err);
 				console.log(`Retrying in 2 seconds`);
 				return setTimeout(register, 2000);
 			}
@@ -89,6 +90,10 @@ socket.on('connect', _ => {
 	register();
 });
 
+socket.on('connect_error', err => {
+	console.log(`Could not connect due to `, err);
+});
+
 function onConfigReceived(data, _) {
 	mqttClient.sendData(`${data.mac}`, data.config);
 }
@@ -96,13 +101,30 @@ function onConfigReceived(data, _) {
 const cmdHandlers = new Map();
 cmdHandlers.set('conf', onConfigReceived);
 
-socket.on('msg', ({ cmd, data }, cb) => {
-	console.log(`Received: ${data}`);
-	const json = JSON.parse(data);
+socket.on(Events.MESSAGE, ({ cmd, data }, cb) => {
+	console.log(`Received [${cmd}]: `, data);
 	if (!cmdHandlers.has(cmd)) {
 		console.log(`No handler defined for: ${cmd}`);
 		return cb?.({ success: false, err: 'No handler defined for that commnad' });
 	}
-
+	const json = JSON.parse(data);
 	cmdHandlers.get(cmd)(json, cb);
+});
+
+socket.on(Events.PIN_VALUE, ({ id, value }) => {
+	// socket.on(Events.PIN_VALUE, data => {
+	// const { id, value } = JSON.parse(data);
+	mqttClient.sendData(`pin/${id}`, value);
+});
+
+socket.on(Events.PIN_SOURCE, ({ id, src, value }) => {
+	// socket.on(Events.PIN_SOURCE, data => {
+	// 	const { id, src, value } = JSON.parse(data);
+	mqttClient.sendData(`pin/${id}/src`, JSON.stringify({ id: src, value }));
+});
+
+socket.on(Events.PARAM_VALUE, ({ id, value }) => {
+	// socket.on(Events.PARAM_VALUE, data => {
+	// 	const { id, value } = JSON.parse(data);
+	mqttClient.sendData(`param/${id}`, value);
 });

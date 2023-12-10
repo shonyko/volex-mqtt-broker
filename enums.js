@@ -7,12 +7,15 @@ export const Events = Object.freeze({
 	}),
 	PAIR: 'pair',
 	CONFIG: 'conf',
+	PARAM_VALUE: 'param_value',
 	PIN_VALUE: 'pin_value',
+	PIN_SOURCE: 'pin_source',
 	CONNECT: 'conn',
 	DISCONNECT: 'dconn',
 	PING: 'ping',
 	PONG: 'pong',
 	MESSAGE: 'msg',
+	BROADCAST: 'event',
 });
 
 export const Services = Object.freeze({

@@ -1,12 +1,12 @@
 // const mqtt = require('mqtt');
 import mqtt from 'mqtt';
 // const { BROKER_ADDR, MQTT_PORT } = require('./config.js');
-import { BROKER_ADDR, MQTT_PORT } from './config.js';
+import { MQTT_ADDR } from './config.js';
 
 export default class MqttHandler {
 	constructor(topics) {
 		this.client = null;
-		this.host = `${BROKER_ADDR}:${MQTT_PORT}`;
+		this.host = MQTT_ADDR;
 		this.topics = topics;
 		this.callbacks = new Map();
 		this.pinValueCallback = null;
@@ -18,14 +18,16 @@ export default class MqttHandler {
 
 		// Mqtt error calback
 		this.client.on('error', err => {
-			console.log(`An error occured: ${err}`);
+			console.log(`[MQTT] An error occured: `, err);
 			this.client.end();
 		});
 
 		// Connection callback
 		this.client.on('connect', _ => {
 			console.log(`mqtt client connected`);
-			this.client.subscribe('pin/#', { qos: 0 });
+			// # - multi  level
+			// + - single level
+			this.client.subscribe('pin/+', { qos: 0, nl: true });
 			this.topics.forEach(topic => {
 				this.client.subscribe(topic, { qos: 0 });
 			});
@@ -61,6 +63,7 @@ export default class MqttHandler {
 	}
 
 	sendData(topic, data) {
+		console.log(`Sending to [${topic}]: `, data);
 		this.client.publish(`${topic}`, `${data}`);
 	}
 }
