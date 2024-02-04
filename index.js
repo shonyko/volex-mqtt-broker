@@ -33,16 +33,19 @@ const mqttClient = new MqttHandler(['conf']);
 // 	}
 // });
 
-mqttClient.on('conf', async macAddr => {
+mqttClient.on(Events.CONFIG, macAddr => {
 	// inputs
 	// outputs
 	// values
 	// params
 	if (socket.connected) {
+		// for virtual agents we set the mac as <script name>-<id>
+		const parts = macAddr.split('-');
 		socket.emit(Events.BROADCAST, {
 			event: Events.CONFIG,
 			data: {
-				mac: macAddr,
+				mac: parts[0],
+				id: parts[1],
 			},
 		});
 	}
